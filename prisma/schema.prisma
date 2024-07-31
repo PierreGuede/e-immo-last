@@ -1,0 +1,196 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  PROFFESSIONAL
+  USER
+  HOTEL
+}
+
+enum UnitMeasure {
+  M
+  Km
+  Ha
+  Da
+}
+
+model User {
+  id                    String                 @id @default(cuid())
+  name                  String?
+  email                 String?                @unique
+  emailVerified         DateTime?
+  image                 String?
+  password              String?
+  role                  UserRole               @default(USER)
+  accounts              Account[]
+  isTwoFactorEnabled    Boolean                @default(false)
+  twoFactorConfirmation TwoFactorConfirmation?
+  Hotel                 Hotel[]
+  Appartement           Appartement[]
+  Location              Location[]
+  ParcelOwning          ParcelOwning[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model VerificationToken {
+  id      String   @id @default(cuid())
+  email   String
+  token   String   @unique
+  expires DateTime
+
+  @@unique([email, token])
+}
+
+model PasswordResetToken {
+  id      String   @id @default(cuid())
+  email   String
+  token   String   @unique
+  expires DateTime
+
+  @@unique([email, token])
+}
+
+model TwoFactorToken {
+  id      String   @id @default(cuid())
+  email   String
+  token   String   @unique
+  expires DateTime
+
+  @@unique([email, token])
+}
+
+model TwoFactorConfirmation {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+}
+
+model City {
+  id          String        @id @default(cuid())
+  name        String
+  Appartement Appartement[]
+  Parcelle    Parcelle[]
+  Hotel       Hotel[]
+  Home        Home[]
+}
+
+model Hotel {
+  id          String        @id @default(cuid())
+  name        String
+  Appartement Appartement[]
+  cityId      String
+  userId      String
+
+  city City @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Appartement {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  verified    Boolean      @default(false)
+  size        Float
+  unity       UnitMeasure? @default(M)
+  chamber     Int
+  living_room Int
+  unte_price  Float
+  cityId      String
+  hotelId     String?
+  userId      String?
+
+  city     City       @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  hotel    Hotel?      @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  user     User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Location Location[]
+}
+
+model Parcelle {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  verified    Boolean      @default(false)
+  size        Float
+  unity       UnitMeasure? @default(M)
+  unte_price  Float
+  cityId      String
+
+  city         City           @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  ParcelOwning ParcelOwning[]
+}
+
+model Home {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  verified    Boolean      @default(false)
+  size        Float
+  unity       UnitMeasure? @default(M)
+  chamber     Int
+  living_room Int
+  piscine     Boolean?
+  garage      Boolean?
+  unte_price  Float
+  cityId      String
+
+  city     City       @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  Location Location[]
+}
+
+model Location {
+  id            String    @id @default(cuid())
+  time_start    DateTime
+  time_end      DateTime?
+  price_total   Float
+  userID        String
+  appartementID String?
+  homeID        String?
+
+  user        User         @relation(fields: [userID], references: [id], onDelete: Cascade)
+  appartement Appartement? @relation(fields: [appartementID], references: [id], onDelete: Cascade)
+  home        Home?        @relation(fields: [homeID], references: [id], onDelete: Cascade)
+}
+
+model ParcelOwning {
+  id         String   @id @default(cuid())
+  dateOwning DateTime
+  userID     String
+  parcelleID String
+
+  user     User     @relation(fields: [userID], references: [id], onDelete: Cascade)
+  parcelle Parcelle @relation(fields: [parcelleID], references: [id], onDelete: Cascade)
+}
